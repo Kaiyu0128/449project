@@ -1,4 +1,4 @@
-### Test1. Hi Kaiyu and Ishani :3
+
 ###Group project
 
 #State the problem and describe the data set
@@ -7,6 +7,18 @@
 #Fit a logistic regression model with all predictors
 
 ```{r}
+
+#Load the data set 
+heart_disease <-read.csv("/Users/ishani/Documents/Math  449/heart_2020_cleaned.csv") 
+head(heart_disease) 
+
+
+#structure and summary of the data 
+str(heart_2020_cleaned.csv) 
+summary(heart_2020_cleaned.csv)
+
+View(heart_disease)
+
 
 ```
 
