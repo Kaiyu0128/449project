@@ -1,0 +1,124 @@
+
+###Group project
+
+#State the problem and describe the data set
+
+
+#Loading Dataset
+```{r}
+rm(list=ls())
+#Load the data set 
+heart_disease <-read.csv("/Users/ishani/Documents/Math  449/heart_2020_cleaned.csv", stringsAsFactors=TRUE) 
+head(heart_disease) 
+
+
+#structure and summary of the data 
+str(heart_disease) 
+summary(heart_disease)
+
+
+
+
+```
+
+
+#Fit a logistic regression model with all predictors
+```{r}
+ageScore = c(21,27,32,37,42,47,52,57,62,67,72,77,90)
+genHeatlhScore = c(1, 2, 3, 4)    # (Poor, Fair, Good, Very good)
+heart_disease$Race = relevel(heart_disease$Race, ref = "White")
+
+#heart_disease$HeartDisease=as.factor(heart_disease$HeartDisease)
+glm.fit=glm(HeartDisease~.,data=heart_disease,family=binomial)
+summary(glm.fit)
+
+heart_disease$Age=rep(0,319795)
+  heart_disease$Age[heart_disease$AgeCategory=="18-24"]=21
+  heart_disease$Age[heart_disease$AgeCategory=="25-29"]=27
+  heart_disease$Age[heart_disease$AgeCategory=="30-34"]=32
+  heart_disease$Age[heart_disease$AgeCategory=="35-39"]=37
+  heart_disease$Age[heart_disease$AgeCategory=="40-44"]=42
+  heart_disease$Age[heart_disease$AgeCategory=="45-49"]=47
+  heart_disease$Age[heart_disease$AgeCategory=="50-54"]=52
+  heart_disease$Age[heart_disease$AgeCategory=="55-59"]=57
+  heart_disease$Age[heart_disease$AgeCategory=="60-64"]=62
+  heart_disease$Age[heart_disease$AgeCategory=="65-69"]=67
+  heart_disease$Age[heart_disease$AgeCategory=="70-74"]=72
+  heart_disease$Age[heart_disease$AgeCategory=="75-79"]=77
+  heart_disease$Age[heart_disease$AgeCategory=="80 or older"]=87
+  
+  
+  glm.fit=glm(HeartDisease~BMI+Smoking+,data=heart_disease,family=binomial)
+```
+
+
+#Select the best subset of variables. Perform a diagnostic on the best model.  Perform all possible inferences you can think about.
+```{r}
+library(leaps)
+library(bestglm)
+
+attach(heart_disease) # need response variable in last column of data file
+HeartDisease2 <- heart_disease[-1] 
+HeartDisease2['y'] <- heart_disease[1]
+HeartDisease2 <- HeartDisease2[c(1:4, 18)]
+
+bestglm(HeartDisease2, family=binomial, IC="AIC")
+```
+
+
+
+#Use the new model to make predictions.
+```{r}
+
+```
+
+
+#Use different pi_0 as a cut-off point and create a confusion table.
+
+
+
+#Perform visualization of data and models.  
+```{r}
+
+```
+
+#Plot the ROC curve, find AUC, and the best cutoff point for classification.
+
+
+#Perform LOOCV and k-fold cross-validation.
+
+```{r}
+
+```
+
+
+
+
+#Try the probit link and the identity links to model data.
+
+
+
+
+#Which model works better for this data?
+
+
+#If you have grouped data, use the methods for contingency tables to analyze the data (Chi sq test, G^2, and so on if applicable).
+
+
+
+
+
+#Write a report
+
+
+
+
+
+
+
+
+
+
+
+
+
