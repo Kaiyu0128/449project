@@ -8,7 +8,8 @@
 ```{r}
 rm(list=ls())
 #Load the data set 
-heart_disease <-read.csv("/Users/ishani/Documents/Math  449/heart_2020_cleaned.csv", stringsAsFactors=TRUE) 
+#heart_disease <-read.csv("/Users/ishani/Documents/Math  449/heart_2020_cleaned.csv", stringAsFactors = TRUE)
+heart_disease <- read.csv("/Users/linw/Desktop/449project/heart_2020_cleaned.csv", stringsAsFactors=TRUE) 
 head(heart_disease) 
 
 
@@ -24,14 +25,20 @@ summary(heart_disease)
 
 #Fit a logistic regression model with all predictors
 ```{r}
-ageScore = c(21,27,32,37,42,47,52,57,62,67,72,77,90)
-genHeatlhScore = c(1, 2, 3, 4)    # (Poor, Fair, Good, Very good)
-heart_disease$Race = relevel(heart_disease$Race, ref = "White")
-
 #heart_disease$HeartDisease=as.factor(heart_disease$HeartDisease)
+
+### Setting reference variables, ordering factors with multiple levels
+heart_disease$Race = relevel(heart_disease$Race, ref = "White")
+heart_disease$GenHealth = factor(heart_disease$GenHealth, levels = c("Excellent", "Very good", "Good", "Fair", "Poor"))
+AgeScore = c(21,27,32,37,42,47,52,57,62,67,72,77,90)
+DiabeticScore = c(0, 1, 2, 3) # (No, No borderline, Yes, Yes pregnant) (ref=No)
+GenHeatlhScore = c(0, 1, 2, 3, 4) # (Excellent, Very good, Good, Fair, Poor)
+
+# Original model
 glm.fit=glm(HeartDisease~.,data=heart_disease,family=binomial)
 summary(glm.fit)
 
+# Adding scores to ordinal variables
 heart_disease$Age=rep(0,319795)
   heart_disease$Age[heart_disease$AgeCategory=="18-24"]=21
   heart_disease$Age[heart_disease$AgeCategory=="25-29"]=27
