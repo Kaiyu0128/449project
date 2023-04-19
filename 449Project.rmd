@@ -8,8 +8,7 @@
 ```{r}
 rm(list=ls())
 #Load the data set 
-#heart_disease <-read.csv("/Users/ishani/Documents/Math  449/heart_2020_cleaned.csv", stringAsFactors = TRUE)
-heart_disease <- read.csv("/Users/linw/Desktop/449project/heart_2020_cleaned.csv", stringsAsFactors=TRUE) 
+heart_disease <-read.csv("/Users/ishani/Documents/Math  449/heart_2020_cleaned.csv", stringsAsFactors=TRUE) 
 head(heart_disease) 
 
 
@@ -22,23 +21,23 @@ summary(heart_disease)
 
 ```
 
+#Data cleaning
 
-#Fit a logistic regression model with all predictors
 ```{r}
-#heart_disease$HeartDisease=as.factor(heart_disease$HeartDisease)
-
-### Setting reference variables, ordering factors with multiple levels
+### Setting reference variables, ordering levels of ordinal variables
 heart_disease$Race = relevel(heart_disease$Race, ref = "White")
 heart_disease$GenHealth = factor(heart_disease$GenHealth, levels = c("Excellent", "Very good", "Good", "Fair", "Poor"))
-AgeScore = c(21,27,32,37,42,47,52,57,62,67,72,77,90)
-DiabeticScore = c(0, 1, 2, 3) # (No, No borderline, Yes, Yes pregnant) (ref=No)
-GenHeatlhScore = c(0, 1, 2, 3, 4) # (Excellent, Very good, Good, Fair, Poor)
 
-# Original model
+# Original linear regression model
 glm.fit=glm(HeartDisease~.,data=heart_disease,family=binomial)
 summary(glm.fit)
 
-# Adding scores to ordinal variables
+attach(heart_disease)
+
+### Creating new quantitative variables for ordinal variables using scores
+# AgeScore = c(21,27,32,37,42,47,52,57,62,67,72,77,90)
+# DiabeticScore = c(0, 1, 2, 3) # (No, No borderline, Yes, Yes pregnant) 
+# GenHeatlhScore = c(0, 1, 2, 3, 4) # (Excellent, Very good, Good, Fair, Poor)
 heart_disease$Age=rep(0,319795)
   heart_disease$Age[heart_disease$AgeCategory=="18-24"]=21
   heart_disease$Age[heart_disease$AgeCategory=="25-29"]=27
@@ -54,22 +53,32 @@ heart_disease$Age=rep(0,319795)
   heart_disease$Age[heart_disease$AgeCategory=="75-79"]=77
   heart_disease$Age[heart_disease$AgeCategory=="80 or older"]=87
   
+heart_disease$DiabeticScore=rep(0,319795)
+  heart_disease$DiabeticScore[heart_disease$Diabetic=="No"]=0
+  heart_disease$DiabeticScore[heart_disease$Diabetic=="No, borderline diabetes"]=1
+  heart_disease$DiabeticScore[heart_disease$Diabetic=="Yes"]=2
+  heart_disease$DiabeticScore[heart_disease$Diabetic=="Yes (during pregnancy)"]=3
   
-  glm.fit=glm(HeartDisease~BMI+Smoking+,data=heart_disease,family=binomial)
+heart_disease$GenHealthScore=rep(0,319795)
+  heart_disease$GenHealthScore[heart_disease$GenHealth=="Excellent"]=0
+  heart_disease$GenHealthScore[heart_disease$GenHealth=="Very good"]=1
+  heart_disease$GenHealthScore[heart_disease$GenHealth=="Good"]=2
+  heart_disease$GenHealthScore[heart_disease$GenHealth=="Fair"]=3
+  heart_disease$GenHealthScore[heart_disease$GenHealth=="Poor"]=4
+```
+
+#Fit a logistic regression model with all predictors
+```{r}
+glm.fit=glm(HeartDisease ~ . -AgeCategory -Diabetic -GenHealth,data=heart_disease,family=binomial)
+summary(glm.fit)
 ```
 
 
 #Select the best subset of variables. Perform a diagnostic on the best model.  Perform all possible inferences you can think about.
 ```{r}
-library(leaps)
-library(bestglm)
 
-attach(heart_disease) # need response variable in last column of data file
-HeartDisease2 <- heart_disease[-1] 
-HeartDisease2['y'] <- heart_disease[1]
-HeartDisease2 <- HeartDisease2[c(1:4, 18)]
 
-bestglm(HeartDisease2, family=binomial, IC="AIC")
+
 ```
 
 
@@ -81,20 +90,37 @@ bestglm(HeartDisease2, family=binomial, IC="AIC")
 
 
 #Use different pi_0 as a cut-off point and create a confusion table.
+```{r}
+#Chapter 4 Lab-4
 
+glm.pred=rep("Down",1250) # generate a 1250-dim vector with each element as "Down", name this vector glm.pred
+glm.pred[glm.probs>.5]="Up" #if the predicted risk > 0.5, assign predicted direction as "up"
+table(glm.pred,Direction) # produce the confusion matrix
+(507+145)/1250
+```
 
 
 #Perform visualization of data and models.  
 ```{r}
-
+plot()
+pairs()
 ```
 
 #Plot the ROC curve, find AUC, and the best cutoff point for classification.
+```{r}
+
+#Logistic_crabs_all - ROC
+
+
+```
 
 
 #Perform LOOCV and k-fold cross-validation.
 
 ```{r}
+
+#LOOCV - problem 7 ch 5 hw 448
+#Logistic_crabs_all - k-fold
 
 ```
 
@@ -112,7 +138,7 @@ bestglm(HeartDisease2, family=binomial, IC="AIC")
 #If you have grouped data, use the methods for contingency tables to analyze the data (Chi sq test, G^2, and so on if applicable).
 
 
-
+same as midterm question
 
 
 #Write a report
