@@ -1,36 +1,46 @@
 
-###Group project
+### Group project
 
-#State the problem and describe the data set
+### State the problem and describe the data set
 
 
-#Loading Dataset
+```{r}
+library(car)
+```
+
+### Loading Dataset
 ```{r}
 rm(list=ls())
 #Load the data set 
-heart_disease <-read.csv("/Users/ishani/Documents/Math  449/heart_2020_cleaned.csv", stringsAsFactors=TRUE) 
-head(heart_disease) 
+#heart_disease <-read.csv("/Users/ishani/Documents/Math 449/heart_2020_cleaned.csv", stringsAsFactors=TRUE) 
+heart_disease <- read.csv("/Users/linw/Desktop/449project/heart_2020_cleaned.csv", stringsAsFactors = TRUE)
 
+head(heart_disease) 
 
 #structure and summary of the data 
 str(heart_disease) 
 summary(heart_disease)
-
-
-
-
 ```
 
-#Data cleaning
+### Data cleaning
 
 ```{r}
+#Outliers
+
+# Save the outlier's index to index_highage
+#index_highage <- which(loan_data$age > 122)
+
+# Create data set new_data with outlier deleted
+#new_data <- loan_data[-index_highage, ]
+
+
 ### Setting reference variables, ordering levels of ordinal variables
 heart_disease$Race = relevel(heart_disease$Race, ref = "White")
 heart_disease$GenHealth = factor(heart_disease$GenHealth, levels = c("Excellent", "Very good", "Good", "Fair", "Poor"))
 
 # Original linear regression model
-glm.fit=glm(HeartDisease~.,data=heart_disease,family=binomial)
-summary(glm.fit)
+glm.fit0=glm(HeartDisease~.,data=heart_disease,family=binomial)
+summary(glm.fit0)
 
 attach(heart_disease)
 
@@ -65,26 +75,141 @@ heart_disease$GenHealthScore=rep(0,319795)
   heart_disease$GenHealthScore[heart_disease$GenHealth=="Good"]=2
   heart_disease$GenHealthScore[heart_disease$GenHealth=="Fair"]=3
   heart_disease$GenHealthScore[heart_disease$GenHealth=="Poor"]=4
-```
 
-#Fit a logistic regression model with all predictors
-```{r}
-glm.fit=glm(HeartDisease ~ . -AgeCategory -Diabetic -GenHealth,data=heart_disease,family=binomial)
-summary(glm.fit)
-```
-
-
-#Select the best subset of variables. Perform a diagnostic on the best model.  Perform all possible inferences you can think about.
-```{r}
-
-
-
+# Remove ordinal variables; replaced with scores
+heart_disease = subset(heart_disease, select = -c(AgeCategory, Diabetic, GenHealth))
 ```
 
 
 
-#Use the new model to make predictions.
+### Fit a logistic regression model with all predictors
 ```{r}
+# AgeCategory, Diabetic, GenHealth replaced with scores
+glm.fit=glm(HeartDisease ~ ., data=heart_disease, family=binomial)
+
+summary(glm.fit) 
+```
+
+
+### Select the best subset of variables. Perform a diagnostic on the best model.  Perform all possible inferences you can think about.
+
+```{r}
+# Model 2: Remove non-significant variables from model with all predictors
+# Remove PhysicalActivity
+glm.fit2 = update(glm.fit, ~ . -PhysicalActivity) 
+summary(glm.fit2)
+
+drop1(glm.fit, test="LRT")
+anova(glm.fit2, glm.fit, test="LRT") # likelihood-ratio test comparing models
+```
+
+We see that...
+
+```{r}
+# Backward elimination
+# step(glm.fit)
+
+#Null model
+# glm.null = glm(HeartDisease ~ 1, family = binomial, data=heart_disease) 
+```
+
+
+### Use the new model to make predictions.
+```{r}
+
+#Confidence Intervals
+
+#Wald confidence interval at alpha=0.05
+alpha=0.05
+(ci_wald=c(g$coef[2,1]-qnorm(1-alpha/2)* g$coef[2,2], g$coef[2,1]+qnorm(1-alpha/2)* g$coef[2,2]))
+
+# walk CI for the multiplicative effect at alpha=0.05
+exp((ci_wald=c(g$coef[2,1]-qnorm(1-alpha/2)* g$coef[2,2], g$coef[2,1]+qnorm(1-alpha/2)* g$coef[2,2]))) 
+
+# LR CI  
+# profile likelihood confidence interval
+confint(fit) 
+
+# confidence interval for the effect
+exp(confint(fit)) 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+#Tests
+
+###########################################################
+
+# Wald test
+
+z=g$coef[2,1]/g$coef[2,2]
+# just get this stat from the summary
+z1=g$coef[2,3]
+# notice that z1=z, 
+
+#pval for normal 
+p_val=2*(1-pnorm(g$coef[2,3]))
+p_val
+
+
+#p_val for chi^2 distr with df=1
+p_val1=1-pchisq(z^2,1)
+p_val1
+
+# Both distributions give the same p-value
+
+
+###########################################################
+
+#Likelihood ratio test
+#Model comparison, compare models g(mu)=alpha+beta x  and g(mu)=alpha
+
+# -2 * (L0-L1) , in your summary 
+#Null deviance=2(L0-Lsaturated), residual deviance=devuiance= -2*(L1-Lsaturated)
+#therefore -2 * (L0-L1)=nul.deviance-deviance
+
+LLstat=(g$null.deviance-g$deviance)
+p_val=1-pchisq(LLstat, 1)
+p_val
+
+
+# automated way to perform the likelihood ratio test, Likelihood-ratio test of snoring and heart disease (comparison with the null
+drop1(fit, test="Chisq")
+
+#Or can use Anova, but need to install many packages for that
+#Anova(fit) 
+
+###########################################################
+#Deviance, goodness of fit
+
+#Deviance
+Deviance=deviance(fit)
+Deviance
+# or
+Deviance=g$deviance
+Deviance
+
+#Goodness of Fit
+P_value=1-pchisq(g$deviance, g$df.res)
+P_value
+
+################################################################
+
+
+
+
+
+
 
 ```
 
@@ -109,8 +234,22 @@ pairs()
 #Plot the ROC curve, find AUC, and the best cutoff point for classification.
 ```{r}
 
-#Logistic_crabs_all - ROC
+#install.packages("ROCR")
+library(ROCR)
 
+attach(heart_disease)
+
+#install.packages("Epi")
+library(Epi)
+
+#Logistic_crabs_all - ROC
+hd.roc = ROC(form=HeartDisease~. -AgeCategory -Diabetic -GenHealth -PhysicalActivity, data=heart_disease, plot="ROC")
+summary(hd.roc)
+
+
+ROC(form=(HeartDisease=1)~Age+Asthma,plot="ROC", data=heart_disease, drop.unused.levels = TRUE)
+
+#AUC(glm1.fit)
 
 ```
 
@@ -122,6 +261,44 @@ pairs()
 #LOOCV - problem 7 ch 5 hw 448
 #Logistic_crabs_all - k-fold
 
+#install.packages("DAAG")
+library(DAAG)
+cv.binary(glm1.fit)
+
+
+glm.fit3=glm(HeartDisease ~ Age + BMI, data = heart_disease[-1, ], family=binomial)
+summary(glm.fit3)
+
+predict.glm(glm.fit3, heart_disease[1, ], type = "response") > 0.5
+
+
+err <- numeric(nrow(heart_disease))
+
+for (i in 1:nrow(heart_disease)) {
+  train <- heart_disease[-i, ]
+  #i
+  glm.fit4 <- glm(HeartDisease ~ Age + BMI, data = train, family = binomial)
+  #ii
+  post <- predict(glm.fit4, heart_disease[i, ], type = "response")
+  #iii
+  pred <- ifelse(post > 0.5, "Yes", "No")
+  #iv
+  er <- as.integer(pred != heart_disease$HeartDisease[i])
+  err[i] <- er
+}
+
+
+err
+
+numOne <- sum(err == 1)
+
+numOne
+
+
+mean(err)
+
+
+
 ```
 
 
@@ -129,7 +306,23 @@ pairs()
 
 #Try the probit link and the identity links to model data.
 
+```{r}
 
+Malformation.ident=glm(cbind(Present, Absent)~alcohol, family=binomial(link="identity"), data=Malform )
+summary(Malformation.ident)
+
+
+fit1 <- glm(evolved ~ ideology, family=binomial(link="identity"), data=Evo)
+summary(fit, dispersion=1)
+summary(fit1)
+
+
+Heart$x <- recode(Heart$snoring, never = 0, occasional = 2, nearly_every_night = 4, every_night = 5)
+fit <- glm(yes/(yes+no) ~ x, family=binomial(link=probit),
+           + weights=yes+no, data=Heart)
+summary(fit)
+
+```
 
 
 #Which model works better for this data?
@@ -137,7 +330,26 @@ pairs()
 
 #If you have grouped data, use the methods for contingency tables to analyze the data (Chi sq test, G^2, and so on if applicable).
 
+```{r}
 
+#Contingency Table of Data
+Malform <- matrix(c(483, 1101, 477, 1121), nrow = 2)
+
+dimnames(Malform)=list(Exercise=c("Regular","Other"),
+                       PersonalityType=c("A","B"))
+addmargins(Malform)
+
+#Chi Squared Test
+chisq.test(Malform)
+
+#G Squared Test
+G.test(Malform)
+
+#Person Standardized Residuals
+stdres <- chisq.test(Malform)$stdres 
+stdres
+
+```
 same as midterm question
 
 
