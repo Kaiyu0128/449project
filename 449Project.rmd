@@ -12,8 +12,8 @@ library(car)
 ```{r}
 rm(list=ls())
 #Load the data set 
-#heart_disease <-read.csv("/Users/ishani/Documents/Math 449/heart_2020_cleaned.csv", stringsAsFactors=TRUE) 
-heart_disease <- read.csv("/Users/linw/Desktop/449project/heart_2020_cleaned.csv", stringsAsFactors = TRUE)
+heart_disease <-read.csv("/Users/ishani/Desktop/449project/heart_2020_cleaned.csv", stringsAsFactors=TRUE) 
+#heart_disease <- read.csv("/Users/linw/Desktop/449project/heart_2020_cleaned.csv", stringsAsFactors = TRUE)
 
 head(heart_disease) 
 
@@ -80,7 +80,10 @@ heart_disease$GenHealthScore=rep(0,319795)
 heart_disease = subset(heart_disease, select = -c(AgeCategory, Diabetic, GenHealth))
 ```
 
-
+### Null model
+```{r}
+glm.null = glm(HeartDisease~1,data=heart_disease,family=binomial)
+```
 
 ### Fit a logistic regression model with all predictors
 ```{r}
@@ -90,36 +93,50 @@ glm.fit=glm(HeartDisease ~ ., data=heart_disease, family=binomial)
 summary(glm.fit) 
 ```
 
+We see that PhysicalActivity is not statistically significant at the 0.05 level with an associated p-value of 0.08527. Thus, we will fit a model with PhysicalActivity dropped.
 
-### Select the best subset of variables. Perform a diagnostic on the best model.  Perform all possible inferences you can think about.
+### Select the best subset of variables. Perform a diagnostic on the best model. Perform all possible inferences you can think about.
 
 ```{r}
-# Model 2: Remove non-significant variables from model with all predictors
-# Remove PhysicalActivity
+# Model 2: p-value selection
+# Remove non-significant variable: PhysicalActivity
 glm.fit2 = update(glm.fit, ~ . -PhysicalActivity) 
 summary(glm.fit2)
+```
 
-drop1(glm.fit, test="LRT")
+We now use backward subset selection to find the best selection of variables and compare with the previous model. 
+
+```{r}
+# Backward subset selection
+library(MASS)
+stepAIC(glm.fit) # stepwise backward selection using AIC
+
+sapply(list(glm.fit, glm.fit2), AIC) # compare AIC of models
+```
+
+After applying backward subset selection, we find that no variables were dropped from the full model containing 17 predictors. Then we compare model 1 and 2 and select the model with the lower AIC. The AICs associated with the all-predictors model and model 2 are 145546 and 145547. However, since the difference in AIC is less than 2, we will choose the simpler model: the model with PhysicalActivity dropped.
+
+### Use the new model to make predictions. Perform a diagnostic on the best model. Perform all possible inferences you can think about. 
+
+```{r}
+# Model diagnostic checking 
+## Checking model goodness-of-fit
+# drop1(glm.fit, test="LRT")
 anova(glm.fit2, glm.fit, test="LRT") # likelihood-ratio test comparing models
+
+## Checking correlation between predictors
+attach(heart_disease)
+cor(heart_disease[,c("BMI", "PhysicalHealth", "MentalHealth", "SleepTime", "Age","DiabeticScore", "GenHealthScore")])  
 ```
 
-We see that...
-
-```{r}
-# Backward elimination
-# step(glm.fit)
-
-#Null model
-# glm.null = glm(HeartDisease ~ 1, family = binomial, data=heart_disease) 
-```
-
-
-### Use the new model to make predictions.
 ```{r}
 
-#Confidence Intervals
 
-#Wald confidence interval at alpha=0.05
+
+glm.fit2
+# Confidence Intervals
+
+# Wald confidence interval at alpha=0.05
 alpha=0.05
 (ci_wald=c(g$coef[2,1]-qnorm(1-alpha/2)* g$coef[2,2], g$coef[2,1]+qnorm(1-alpha/2)* g$coef[2,2]))
 
@@ -328,29 +345,8 @@ summary(fit)
 #Which model works better for this data?
 
 
-#If you have grouped data, use the methods for contingency tables to analyze the data (Chi sq test, G^2, and so on if applicable).
 
-```{r}
 
-#Contingency Table of Data
-Malform <- matrix(c(483, 1101, 477, 1121), nrow = 2)
-
-dimnames(Malform)=list(Exercise=c("Regular","Other"),
-                       PersonalityType=c("A","B"))
-addmargins(Malform)
-
-#Chi Squared Test
-chisq.test(Malform)
-
-#G Squared Test
-G.test(Malform)
-
-#Person Standardized Residuals
-stdres <- chisq.test(Malform)$stdres 
-stdres
-
-```
-same as midterm question
 
 
 #Write a report
