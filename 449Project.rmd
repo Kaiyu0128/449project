@@ -10,39 +10,25 @@ library(car)
 
 ### Loading Dataset
 ```{r}
-rm(list=ls())
+rm(list=ls()) # Clears objects from workspace
 #Load the data set 
-heart_disease <-read.csv("/Users/ishani/Desktop/449project/heart_2020_cleaned.csv", stringsAsFactors=TRUE) 
-#heart_disease <- read.csv("/Users/linw/Desktop/449project/heart_2020_cleaned.csv", stringsAsFactors = TRUE)
+#heart_disease <-read.csv("/Users/ishani/Desktop/449project/heart_2020_cleaned.csv", stringsAsFactors=TRUE) 
+heart_disease <- read.csv("/Users/linw/Desktop/449project/heart_2020_cleaned.csv", stringsAsFactors = TRUE)
 
 head(heart_disease) 
 
 #structure and summary of the data 
 str(heart_disease) 
 summary(heart_disease)
+attach(heart_disease)
 ```
 
 ### Data cleaning
 
 ```{r}
-#Outliers
-
-# Save the outlier's index to index_highage
-#index_highage <- which(loan_data$age > 122)
-
-# Create data set new_data with outlier deleted
-#new_data <- loan_data[-index_highage, ]
-
-
 ### Setting reference variables, ordering levels of ordinal variables
 heart_disease$Race = relevel(heart_disease$Race, ref = "White")
 heart_disease$GenHealth = factor(heart_disease$GenHealth, levels = c("Excellent", "Very good", "Good", "Fair", "Poor"))
-
-# Original linear regression model
-glm.fit0=glm(HeartDisease~.,data=heart_disease,family=binomial)
-summary(glm.fit0)
-
-attach(heart_disease)
 
 ### Creating new quantitative variables for ordinal variables using scores
 # AgeScore = c(21,27,32,37,42,47,52,57,62,67,72,77,90)
@@ -80,8 +66,8 @@ heart_disease$GenHealthScore=rep(0,319795)
 heart_disease = subset(heart_disease, select = -c(AgeCategory, Diabetic, GenHealth))
 ```
 
-### Null model
 ```{r}
+# Null model
 glm.null = glm(HeartDisease~1,data=heart_disease,family=binomial)
 ```
 
@@ -89,7 +75,6 @@ glm.null = glm(HeartDisease~1,data=heart_disease,family=binomial)
 ```{r}
 # AgeCategory, Diabetic, GenHealth replaced with scores
 glm.fit=glm(HeartDisease ~ ., data=heart_disease, family=binomial)
-
 summary(glm.fit) 
 ```
 
@@ -102,6 +87,10 @@ We see that PhysicalActivity is not statistically significant at the 0.05 level 
 # Remove non-significant variable: PhysicalActivity
 glm.fit2 = update(glm.fit, ~ . -PhysicalActivity) 
 summary(glm.fit2)
+
+## Checking model goodness-of-fit
+# drop1(glm.fit, test="LRT")
+anova(glm.fit2, glm.fit, test="LRT") # likelihood-ratio test comparing models
 ```
 
 We now use backward subset selection to find the best selection of variables and compare with the previous model. 
@@ -109,83 +98,34 @@ We now use backward subset selection to find the best selection of variables and
 ```{r}
 # Backward subset selection
 library(MASS)
-stepAIC(glm.fit) # stepwise backward selection using AIC
+#stepAIC(glm.fit) # stepwise backward selection using AIC
 
 sapply(list(glm.fit, glm.fit2), AIC) # compare AIC of models
 ```
 
 After applying backward subset selection, we find that no variables were dropped from the full model containing 17 predictors. Then we compare model 1 and 2 and select the model with the lower AIC. The AICs associated with the all-predictors model and model 2 are 145546 and 145547. However, since the difference in AIC is less than 2, we will choose the simpler model: the model with PhysicalActivity dropped.
 
-### Use the new model to make predictions. Perform a diagnostic on the best model. Perform all possible inferences you can think about. 
-
 ```{r}
-# Model diagnostic checking 
-## Checking model goodness-of-fit
-# drop1(glm.fit, test="LRT")
-anova(glm.fit2, glm.fit, test="LRT") # likelihood-ratio test comparing models
-
+# Model diagnostic checking
 ## Checking correlation between predictors
-attach(heart_disease)
 cor(heart_disease[,c("BMI", "PhysicalHealth", "MentalHealth", "SleepTime", "Age","DiabeticScore", "GenHealthScore")])  
 ```
 
 ```{r}
+# Conducting Inference
+summary(glm.fit2) # Wald z-scores
+```
 
-
-
-glm.fit2
+```{r}
 # Confidence Intervals
 
-# Wald confidence interval at alpha=0.05
-alpha=0.05
-(ci_wald=c(g$coef[2,1]-qnorm(1-alpha/2)* g$coef[2,2], g$coef[2,1]+qnorm(1-alpha/2)* g$coef[2,2]))
+# Wald confidence interval
+confint.default(glm.fit2) 
+# Wald confidence interval for the effect
+exp(confint.default(glm.fit2)) 
+```
 
-# walk CI for the multiplicative effect at alpha=0.05
-exp((ci_wald=c(g$coef[2,1]-qnorm(1-alpha/2)* g$coef[2,2], g$coef[2,1]+qnorm(1-alpha/2)* g$coef[2,2]))) 
-
-# LR CI  
-# profile likelihood confidence interval
-confint(fit) 
-
-# confidence interval for the effect
-exp(confint(fit)) 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-#Tests
-
-###########################################################
-
-# Wald test
-
-z=g$coef[2,1]/g$coef[2,2]
-# just get this stat from the summary
-z1=g$coef[2,3]
-# notice that z1=z, 
-
-#pval for normal 
-p_val=2*(1-pnorm(g$coef[2,3]))
-p_val
-
-
-#p_val for chi^2 distr with df=1
-p_val1=1-pchisq(z^2,1)
-p_val1
-
-# Both distributions give the same p-value
-
-
+```{r}
 ###########################################################
 
 #Likelihood ratio test
@@ -222,59 +162,59 @@ P_value
 
 ################################################################
 
-
-
-
-
-
-
 ```
 
-
-#Use different pi_0 as a cut-off point and create a confusion table.
+### Use the new model to make predictions. 
 ```{r}
-#Chapter 4 Lab-4
+# Making predictions
+contrasts(heart_disease$HeartDisease)
+glm.probs=predict(glm.fit2, type="response")
+predicted.classes <- ifelse(glm.probs > 0.5, "Yes", "No")
+head(predicted.classes)
 
-glm.pred=rep("Down",1250) # generate a 1250-dim vector with each element as "Down", name this vector glm.pred
-glm.pred[glm.probs>.5]="Up" #if the predicted risk > 0.5, assign predicted direction as "up"
-table(glm.pred,Direction) # produce the confusion matrix
-(507+145)/1250
+# Assessing model accuracy
+mean(predicted.classes == heart_disease$HeartDisease)
 ```
 
+### Use different pi_0 as a cut-off point and create a confusion table.
+```{r}
+# pi_0 = 0.2
+glm.pred=rep("No", nrow(heart_disease)) # generate a vector with each element as "No", name this vector glm.pred
+glm.pred[glm.probs>0.2]="Yes" #if the predicted probability of heart disease > 0.5, assign predicted direction as "up"
+table(glm.pred,heart_disease$HeartDisease) # produce the confusion matrix
+mean(glm.pred==heart_disease$HeartDisease)
 
-#Perform visualization of data and models.  
+# pi_0 = 0.3
+glm.pred=rep("No", nrow(heart_disease)) # generate a vector with each element as "No", name this vector glm.pred
+glm.pred[glm.probs>0.3]="Yes" #if the predicted probability of heart disease > 0.5, assign predicted direction as "up"
+table(glm.pred,heart_disease$HeartDisease) # produce the confusion matrix
+mean(glm.pred==heart_disease$HeartDisease)
+
+# pi_0 = 0.4
+glm.pred=rep("No", nrow(heart_disease)) # generate a vector with each element as "No", name this vector glm.pred
+glm.pred[glm.probs>0.4]="Yes" #if the predicted probability of heart disease > 0.5, assign predicted direction as "up"
+table(glm.pred,heart_disease$HeartDisease) # produce the confusion matrix
+mean(glm.pred==heart_disease$HeartDisease)
+```
+
+### Perform visualization of data and models.  
 ```{r}
 plot()
 pairs()
 ```
 
-#Plot the ROC curve, find AUC, and the best cutoff point for classification.
+### Plot the ROC curve, find AUC, and the best cutoff point for classification.
 ```{r}
-
-#install.packages("ROCR")
-library(ROCR)
-
-attach(heart_disease)
-
-#install.packages("Epi")
 library(Epi)
+# ROC curve and AUC
+hd.roc = ROC(form=HeartDisease~. -PhysicalActivity, data=heart_disease, plot="ROC")
 
-#Logistic_crabs_all - ROC
-hd.roc = ROC(form=HeartDisease~. -AgeCategory -Diabetic -GenHealth -PhysicalActivity, data=heart_disease, plot="ROC")
-summary(hd.roc)
-
-
-ROC(form=(HeartDisease=1)~Age+Asthma,plot="ROC", data=heart_disease, drop.unused.levels = TRUE)
-
-#AUC(glm1.fit)
-
+#Sensitivity is the true positive rate; P(predicted=1 | y=1) = 51/(51+46) = 0.53. #Specificity is the true negative rate; P(predicted=0 | y=0) = 633/(633+320) = 0.66.
 ```
-
 
 #Perform LOOCV and k-fold cross-validation.
 
 ```{r}
-
 #LOOCV - problem 7 ch 5 hw 448
 #Logistic_crabs_all - k-fold
 
