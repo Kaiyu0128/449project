@@ -13,7 +13,8 @@ library(car)
 rm(list=ls()) # Clears objects from workspace
 #Load the data set 
 #heart_disease <-read.csv("/Users/ishani/Desktop/449project/heart_2020_cleaned.csv", stringsAsFactors=TRUE) 
-heart_disease <- read.csv("/Users/linw/Desktop/449project/heart_2020_cleaned.csv", stringsAsFactors = TRUE)
+#heart_disease <- read.csv("/Users/linw/Desktop/449project/heart_2020_cleaned.csv", stringsAsFactors = TRUE)
+heart_disease <- read.csv("/Users/kaiyuyokoi/Desktop/math_449/449project/heart_2020_cleaned.csv", stringsAsFactors = TRUE)
 
 head(heart_disease) 
 
@@ -199,8 +200,13 @@ mean(glm.pred==heart_disease$HeartDisease)
 
 ### Perform visualization of data and models.  
 ```{r}
-plot()
-pairs()
+library(ggplot2)
+ggplot(data.frame(Probability = glm.probs), aes(x=Probability)) +
+  geom_histogram(bins=30, fill="skyblue", color="black") +
+  labs(x="Predicted Probability", y="Count") +
+  theme_minimal()
+#plot()
+#pairs()
 ```
 
 ### Plot the ROC curve, find AUC, and the best cutoff point for classification.
@@ -211,6 +217,7 @@ hd.roc = ROC(form=HeartDisease~. -PhysicalActivity, data=heart_disease, plot="RO
 
 #Sensitivity is the true positive rate; P(predicted=1 | y=1) = 51/(51+46) = 0.53. #Specificity is the true negative rate; P(predicted=0 | y=0) = 633/(633+320) = 0.66.
 ```
+
 
 #Perform LOOCV and k-fold cross-validation.
 
