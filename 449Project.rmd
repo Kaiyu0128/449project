@@ -1,20 +1,21 @@
+---
+title: "Logistic Regression Project: Heart Disease"
+author: "William Lin, Ishani Parekh, Kaiyu Yokoi"
+output:
+  word_document: default
+  html_document: default
+date: "2023-05-18"
+---
 
-### Group project
+### Problem statement and description of data
+...
 
-### State the problem and describe the data set
-
-
-```{r}
-library(car)
-```
-
-### Loading Dataset
+### Loading dataset
 ```{r}
 rm(list=ls()) # Clears objects from workspace
 #Load the data set 
 #heart_disease <-read.csv("/Users/ishani/Desktop/449project/heart_2020_cleaned.csv", stringsAsFactors=TRUE) 
-#heart_disease <- read.csv("/Users/linw/Desktop/449project/heart_2020_cleaned.csv", stringsAsFactors = TRUE)
-heart_disease <- read.csv("/Users/kaiyuyokoi/Desktop/math_449/449project/heart_2020_cleaned.csv", stringsAsFactors = TRUE)
+heart_disease <- read.csv("/Users/linw/Desktop/449project/heart_2020_cleaned.csv", stringsAsFactors = TRUE)
 
 head(heart_disease) 
 
@@ -67,19 +68,61 @@ heart_disease$GenHealthScore=rep(0,319795)
 heart_disease = subset(heart_disease, select = -c(AgeCategory, Diabetic, GenHealth))
 ```
 
+### Visualization of response variable
 ```{r}
-# Null model
-glm.null = glm(HeartDisease~1,data=heart_disease,family=binomial)
+summary(heart_disease$HeartDisease)
+count.yes = nrow(heart_disease[heart_disease$HeartDisease == 'Yes', ])
+count.no = nrow(heart_disease[heart_disease$HeartDisease == 'No', ])
+# Proportion of yes
+(prop.yes = count.yes / (count.yes + count.no))
+```
+
+The data is unbalanced; only 8.5% of the response variable are Yes's. Training data is likely to be biased towards the No responses. For this project we will downsample the No class such that the proportion of No responses is 2/3. 
+
+```{r}
+# Downsampling majority class
+set.seed(123)
+yes.df <- heart_disease[which(heart_disease$HeartDisease == "Yes"), ]
+no.df <- heart_disease[which(heart_disease$HeartDisease == "No"), ]
+no.index <- as.numeric(rownames(no.df))
+no.sample <- sample(no.index, 2*count.yes)
+no.sample.index <- data.frame(no.sample)
+no.sample.index <- no.sample.index[order(no.sample), ]
+no.downsample <- heart_disease[no.sample.index, ] 
+heart_disease2 <- rbind(yes.df, no.downsample)
+
+summary(heart_disease2)
+```
+
+### Training and test sets
+```{r}
+library(ggplot2)
+set.seed(1)
+
+train = sample(1:nrow(heart_disease2), 0.8*nrow(heart_disease2)) # 80/20 split
+test = (-train)
+y.test = heart_disease2$HeartDisease[test]
+
+# Dataframes
+train.df = data.frame(heart_disease2[train,])
+test.df = data.frame(heart_disease2[test,])
+```
+
+### Null model
+```{r}
+glm.null = glm(HeartDisease~1, data=heart_disease2, subset=train,
+               family=binomial)
 ```
 
 ### Fit a logistic regression model with all predictors
 ```{r}
 # AgeCategory, Diabetic, GenHealth replaced with scores
-glm.fit=glm(HeartDisease ~ ., data=heart_disease, family=binomial)
+glm.fit=glm(HeartDisease ~ ., data=heart_disease2, subset = train,
+            family=binomial)
 summary(glm.fit) 
 ```
 
-We see that PhysicalActivity is not statistically significant at the 0.05 level with an associated p-value of 0.08527. Thus, we will fit a model with PhysicalActivity dropped.
+We see that PhysicalActivity is not statistically significant at the 0.05 level with an associated p-value of 0.0551. Thus, we will fit a model with PhysicalActivity dropped.
 
 ### Select the best subset of variables. Perform a diagnostic on the best model. Perform all possible inferences you can think about.
 
@@ -94,23 +137,25 @@ summary(glm.fit2)
 anova(glm.fit2, glm.fit, test="LRT") # likelihood-ratio test comparing models
 ```
 
-We now use backward subset selection to find the best selection of variables and compare with the previous model. 
+We fail to reject H0, so it is safe to assume that the models are the same. Now we use backward subset selection to find the best selection of variables and compare with the previous model. 
 
 ```{r}
 # Backward subset selection
 library(MASS)
-#stepAIC(glm.fit) # stepwise backward selection using AIC
+stepAIC(glm.fit) # stepwise backward selection using AIC
 
 sapply(list(glm.fit, glm.fit2), AIC) # compare AIC of models
 ```
 
-After applying backward subset selection, we find that no variables were dropped from the full model containing 17 predictors. Then we compare model 1 and 2 and select the model with the lower AIC. The AICs associated with the all-predictors model and model 2 are 145546 and 145547. However, since the difference in AIC is less than 2, we will choose the simpler model: the model with PhysicalActivity dropped.
+After applying backward subset selection, we find that no variables were dropped from the full model containing 17 predictors. Then we compare model 1 and 2 and select the model with the lower AIC. The AICs associated with the all-predictors model and model 2 are 145546 and 145547. However, since the difference in AIC 2, we will choose the simpler model: the model with PhysicalActivity dropped.
 
 ```{r}
 # Model diagnostic checking
 ## Checking correlation between predictors
 cor(heart_disease[,c("BMI", "PhysicalHealth", "MentalHealth", "SleepTime", "Age","DiabeticScore", "GenHealthScore")])  
 ```
+
+There is no apparent multicollinearity in the predictors; each correlation coefficient is less than 0.75.
 
 ```{r}
 # Conducting Inference
@@ -126,85 +171,40 @@ confint.default(glm.fit2)
 exp(confint.default(glm.fit2)) 
 ```
 
-```{r}
-###########################################################
-
-#Likelihood ratio test
-#Model comparison, compare models g(mu)=alpha+beta x  and g(mu)=alpha
-
-# -2 * (L0-L1) , in your summary 
-#Null deviance=2(L0-Lsaturated), residual deviance=devuiance= -2*(L1-Lsaturated)
-#therefore -2 * (L0-L1)=nul.deviance-deviance
-
-LLstat=(g$null.deviance-g$deviance)
-p_val=1-pchisq(LLstat, 1)
-p_val
-
-
-# automated way to perform the likelihood ratio test, Likelihood-ratio test of snoring and heart disease (comparison with the null
-drop1(fit, test="Chisq")
-
-#Or can use Anova, but need to install many packages for that
-#Anova(fit) 
-
-###########################################################
-#Deviance, goodness of fit
-
-#Deviance
-Deviance=deviance(fit)
-Deviance
-# or
-Deviance=g$deviance
-Deviance
-
-#Goodness of Fit
-P_value=1-pchisq(g$deviance, g$df.res)
-P_value
-
-################################################################
-
-```
-
 ### Use the new model to make predictions. 
 ```{r}
 # Making predictions
-contrasts(heart_disease$HeartDisease)
+contrasts(heart_disease2$HeartDisease)
 glm.probs=predict(glm.fit2, type="response")
 predicted.classes <- ifelse(glm.probs > 0.5, "Yes", "No")
-head(predicted.classes)
 
 # Assessing model accuracy
-mean(predicted.classes == heart_disease$HeartDisease)
+(mean(predicted.classes == heart_disease2$HeartDisease))
 ```
 
 ### Use different pi_0 as a cut-off point and create a confusion table.
 ```{r}
 # pi_0 = 0.2
-glm.pred=rep("No", nrow(heart_disease)) # generate a vector with each element as "No", name this vector glm.pred
+glm.pred=rep("No", nrow(heart_disease2)) # generate a vector with each element as "No", name this vector glm.pred
 glm.pred[glm.probs>0.2]="Yes" #if the predicted probability of heart disease > 0.5, assign predicted direction as "up"
-table(glm.pred,heart_disease$HeartDisease) # produce the confusion matrix
-mean(glm.pred==heart_disease$HeartDisease)
+table(glm.pred,heart_disease2$HeartDisease) # produce the confusion matrix
+mean(glm.pred==heart_disease2$HeartDisease)
 
 # pi_0 = 0.3
-glm.pred=rep("No", nrow(heart_disease)) # generate a vector with each element as "No", name this vector glm.pred
+glm.pred=rep("No", nrow(heart_disease2)) # generate a vector with each element as "No", name this vector glm.pred
 glm.pred[glm.probs>0.3]="Yes" #if the predicted probability of heart disease > 0.5, assign predicted direction as "up"
-table(glm.pred,heart_disease$HeartDisease) # produce the confusion matrix
-mean(glm.pred==heart_disease$HeartDisease)
+table(glm.pred,heart_disease2$HeartDisease) # produce the confusion matrix
+mean(glm.pred==heart_disease2$HeartDisease)
 
 # pi_0 = 0.4
-glm.pred=rep("No", nrow(heart_disease)) # generate a vector with each element as "No", name this vector glm.pred
+glm.pred=rep("No", nrow(heart_disease2)) # generate a vector with each element as "No", name this vector glm.pred
 glm.pred[glm.probs>0.4]="Yes" #if the predicted probability of heart disease > 0.5, assign predicted direction as "up"
-table(glm.pred,heart_disease$HeartDisease) # produce the confusion matrix
-mean(glm.pred==heart_disease$HeartDisease)
+table(glm.pred,heart_disease2$HeartDisease) # produce the confusion matrix
+mean(glm.pred==heart_disease2$HeartDisease)
 ```
 
 ### Perform visualization of data and models.  
 ```{r}
-library(ggplot2)
-ggplot(data.frame(Probability = glm.probs), aes(x=Probability)) +
-  geom_histogram(bins=30, fill="skyblue", color="black") +
-  labs(x="Predicted Probability", y="Count") +
-  theme_minimal()
 #plot()
 #pairs()
 ```
@@ -213,11 +213,10 @@ ggplot(data.frame(Probability = glm.probs), aes(x=Probability)) +
 ```{r}
 library(Epi)
 # ROC curve and AUC
-hd.roc = ROC(form=HeartDisease~. -PhysicalActivity, data=heart_disease, plot="ROC")
+hd.roc = ROC(form=HeartDisease~. -PhysicalActivity, data=heart_disease2[train, ], plot="ROC")
 
 #Sensitivity is the true positive rate; P(predicted=1 | y=1) = 51/(51+46) = 0.53. #Specificity is the true negative rate; P(predicted=0 | y=0) = 633/(633+320) = 0.66.
 ```
-
 
 #Perform LOOCV and k-fold cross-validation.
 
@@ -225,7 +224,6 @@ hd.roc = ROC(form=HeartDisease~. -PhysicalActivity, data=heart_disease, plot="RO
 #LOOCV - problem 7 ch 5 hw 448
 #Logistic_crabs_all - k-fold
 
-#install.packages("DAAG")
 library(DAAG)
 cv.binary(glm1.fit)
 
