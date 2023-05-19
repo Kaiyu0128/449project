@@ -68,7 +68,7 @@ heart_disease$GenHealthScore=rep(0,319795)
 heart_disease = subset(heart_disease, select = -c(AgeCategory, Diabetic, GenHealth))
 ```
 
-### Visualization of response variable
+### Checking proportions in response variable
 ```{r}
 summary(heart_disease$HeartDisease)
 count.yes = nrow(heart_disease[heart_disease$HeartDisease == 'Yes', ])
@@ -158,21 +158,34 @@ cor(heart_disease[,c("BMI", "PhysicalHealth", "MentalHealth", "SleepTime", "Age"
 There is no apparent multicollinearity in the predictors; each correlation coefficient is less than 0.75.
 
 ```{r}
+## Check for influential values
+plot(glm.fit2, which = 4, id.n = 3)
+
+library(broom)
+# Extract model results
+model.data <- augment(glm.fit2) %>% 
+  mutate(index = 1:n()) 
+# Top 3 influential values
+model.data %>% top_n(3, .cooksd)
+
+ggplot(model.data, aes(index, .std.resid)) + 
+  geom_point(aes(color = HeartDisease), alpha = .5) +
+  theme_bw()
+
+# Filter potential influential data points with abs(.std.res) > 3
+model.data %>% 
+  filter(abs(.std.resid) > 3)
+```
+
+There are 8 observations that are very influential in the logistic regression model.
+
+```{r}
 ## Check the linear relationship between 
 ## continuous predictor variables and the logit of the outcome 
 library(dplyr)
 library(tidyr)
 
-glm.probs=predict(glm.fit2, type="response") 
 
-# # Select only numeric predictors
-# num_only <- train.df %>%
-#   dplyr::select_if(is.numeric) 
-# predictors <- colnames(num_only)
-# # Bind the logit and tidying the data for plot
-# num_only <- num_only %>%
-#   mutate(logit = log(glm.probs/(1-glm.probs))) %>%
-#   gather(key = "predictors", value = "predictor.value", -logit)
 
 ```
 
