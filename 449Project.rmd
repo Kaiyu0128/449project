@@ -158,16 +158,39 @@ cor(heart_disease[,c("BMI", "PhysicalHealth", "MentalHealth", "SleepTime", "Age"
 There is no apparent multicollinearity in the predictors; each correlation coefficient is less than 0.75.
 
 ```{r}
+## Check the linear relationship between 
+## continuous predictor variables and the logit of the outcome 
+library(dplyr)
+library(tidyr)
+
+glm.probs=predict(glm.fit2, type="response") 
+
+# # Select only numeric predictors
+# num_only <- train.df %>%
+#   dplyr::select_if(is.numeric) 
+# predictors <- colnames(num_only)
+# # Bind the logit and tidying the data for plot
+# num_only <- num_only %>%
+#   mutate(logit = log(glm.probs/(1-glm.probs))) %>%
+#   gather(key = "predictors", value = "predictor.value", -logit)
+
+```
+
+```{r}
 # Conducting Inference
-summary(glm.fit2) # Wald z-scores
+
+# Wald test
+summary(glm.fit2) 
+
+# Likelihood ratio test
+library(car)
+Anova(glm.fit2)
 ```
 
 ```{r}
 # Confidence Intervals
 
-# Wald confidence interval
-confint.default(glm.fit2) 
-# Wald confidence interval for the effect
+# Wald confidence intervals for the multiplicative effect on odds
 exp(confint.default(glm.fit2)) 
 ```
 
@@ -205,8 +228,15 @@ mean(glm.pred==heart_disease2$HeartDisease)
 
 ### Perform visualization of data and models.  
 ```{r}
-#plot()
-#pairs()
+library(ggplot2)
+library(broom)
+
+par(mfrow = c(2, 2))
+
+plot(heart_disease2$HeartDisease, col = c("lightblue", "firebrick"))
+ggplot(glm(HeartDisease ~ BMI, family = binomial, data=heart_disease2))
+plot(jitter(HeartDisease, 0.08) ~ , data=heart_disease2)
+
 ```
 
 ### Plot the ROC curve, find AUC, and the best cutoff point for classification.
