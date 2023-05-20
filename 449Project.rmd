@@ -249,19 +249,16 @@ library(broom)
 
 library(lessR)
 #Visual representation of proportion tables
-par(mfrow=c(1,1))
+par(mfrow=c(2,2))
 
 PieChart(HeartDisease, hole = 0, values = "%", data = heart_disease,
          fill = c("lightblue", "darkblue"), main = "Heart Disease")
-hist(heart_disease$BMI) 
 PieChart(Smoking, hole = 0, values = "%", data = heart_disease,
          fill = c("lightblue", "darkblue"), main = "Smoking")
 PieChart(AlcoholDrinking, hole = 0, values = "%", data = heart_disease,
          fill = c("lightblue", "darkblue"), main = "Alcohol Drinking")
 PieChart(Stroke, hole = 0, values = "%", data = heart_disease,
          fill = c("lightblue", "darkblue"), main = "Stroke")
-hist(heart_disease$PhysicalHealth)
-hist(heart_disease$MentalHealth)
 PieChart(DiffWalking, hole = 0, values = "%", data = heart_disease,
          fill = c("lightblue", "darkblue"), main = "DiffWalking")
 PieChart(Sex, hole = 0, values = "%", data = heart_disease,
@@ -270,7 +267,6 @@ PieChart(Race, hole = 0, values = "%", data = heart_disease,
          fill = c("red", "orange", "yellow", "green", "blue", "purple"), main = "Race")
 PieChart(PhysicalActivity, hole = 0, values = "%", data = heart_disease,
          fill = c("lightblue", "blue"), main = "PhysicalActivity")
-hist(heart_disease$SleepTime)
 PieChart(PhysicalActivity, hole = 0, values = "%", data = heart_disease,
          fill = c("lightblue", "blue"), main = "Asthma")
 PieChart(KidneyDisease, hole = 0, values = "%", data = heart_disease,
@@ -284,11 +280,20 @@ PieChart(heart_disease.GenHealth, hole = 0, values = "%", data = originalvars,
          fill = c("darkgreen", "green", "lightgreen", "yellow", "red"), main = "GenHealth")
 ```
 
+```{r}
+par(mfrow=c(2,2))
+hist(heart_disease$BMI, col = "blue")
+hist(heart_disease$PhysicalHealth, col = "blue")
+hist(heart_disease$MentalHealth, col = "blue")
+hist(heart_disease$SleepTime, col = "blue")
+plot(originalvars$heart_disease.AgeCategory, col = "blue", main="Age Category")
+```
+
 ### Plot the ROC curve, find AUC, and the best cutoff point for classification.
 ```{r}
 library(Epi)
 # ROC curve and AUC
-hd.roc = ROC(form=HeartDisease ~ . -PhysicalActivity, data=test.df, plot="ROC", MX = TRUE)
+hd.roc = ROC(form=HeartDisease ~ . -PhysicalActivity, data=test.df, plot="ROC", MX = TRUE, MI=FALSE)
 ```
 
 The best cutoff point for classification is 0.337.
